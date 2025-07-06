@@ -1,23 +1,26 @@
+import pandas as pd
 from typing import List, Dict
+from .model_utils import predict_emotion
 
-# بيانات الكتب والمقالات (ممكن تعدل لتحميل من ملف أو قاعدة بيانات)
-books = [
-    {"title": "Book 1", "emotion": "joy"},
-    {"title": "Book 2", "emotion": "sad"},
-    {"title": "Book 3", "emotion": "love"},
-]
+mood_map = {
+    'sadness': ['joy', 'surprise'],
+    'anger': ['love', 'joy'],
+    'fear': ['love', 'joy'],
+    'joy': ['joy','surprise', 'love'],
+    'surprise': ['love', 'joy'],
+    'love': ['joy', 'love', 'surprise']
+}
 
-articles = [
-    {"title": "Article 1", "emotion": "joy"},
-    {"title": "Article 2", "emotion": "sad"},
-    {"title": "Article 3", "emotion": "love"},
-]
+def recommend_books(emotion: str, top_n: int = 5) -> List[Dict]:
+    df = pd.read_csv("./data/classified_books.csv")
+    return df[df["emotion"].isin(mood_map.get(emotion, []))].head(top_n)[["title", "authors", "emotion"]].to_dict(orient="records")
 
-def recommend_content(emotion: str) -> Dict[str, List[str]]:
-    """ترجع توصيات كتب ومقالات بناءً على المشاعر"""
-    recommended_books = [b["title"] for b in books if b["emotion"] == emotion]
-    recommended_articles = [a["title"] for a in articles if a["emotion"] == emotion]
+def recommend_articles(emotion: str, top_n: int = 5) -> List[Dict]:
+    df = pd.read_csv("./data/classified_articles.csv")
+    return df[df["emotion"].isin(mood_map.get(emotion, []))].head(top_n)[["title", "url", "emotion"]].to_dict(orient="records")
+
+def recommend_content(emotion: str, top_n: int = 5) -> Dict[str, List[Dict]]:
     return {
-        "books": recommended_books,
-        "articles": recommended_articles
+        "books": recommend_books(emotion, top_n),
+        "articles": recommend_articles(emotion, top_n)
     }
