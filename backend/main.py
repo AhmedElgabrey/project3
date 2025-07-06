@@ -45,7 +45,7 @@ async def root():
     return {"message": "✅ API is running!"}
 
 
-@app.post("/predict")
+@app.get("/predict")
 def predict_emotion_api(data: TextInput):
     """
     توقع المشاعر من نص
@@ -73,7 +73,7 @@ def recommend_based_on_text(data: TextInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/daily-report")
+@app.get("/daily-report")
 def daily_report_api(data: DailyPostsInput):
     """
     إنشاء تقرير يومي للمشاعر من مجموعة منشورات
