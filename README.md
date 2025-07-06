@@ -1,140 +1,92 @@
-# Emotion-Based Content Recommendation System
+# 📚 Emotion-Based Content Recommendation API
 
-This project implements an emotion-based content recommendation system that suggests books and articles based on user emotions. The system uses natural language processing and machine learning to classify user input into emotions and then recommends suitable content accordingly. A FastAPI backend is provided to serve the system as an API.
+This project is an AI-powered backend system for recommending books and articles based on the detected emotion from user-provided text. It also generates a daily emotional impact report based on user posts.
 
-## 💡 Features
+---
 
-- Emotion classification (joy, sadness, fear, anger, love, surprise)
-- Text preprocessing (lemmatization, TF-IDF vectorization)
-- Handles imbalanced data using SMOTE
-- Sentiment scoring and readability analysis
-- Book & article recommendation based on emotional state
-- Daily emotional impact report generation
-- RESTful API using FastAPI
+## 🔧 Features
 
-## 📁 Project Structure
+* **Emotion Detection** using a trained Random Forest classifier.
+* **Content Recommendation** based on predicted emotion.
+* **Daily Emotion Report** summarizing user emotional trends and content suggestions.
+* **Preprocessing Pipeline** for clean and meaningful feature extraction.
+* **RESTful API** built with FastAPI.
+
+---
+
+## 🚀 How It Works
+
+1. **Text Input** ➜ cleaned & lemmatized.
+2. **TF-IDF Vectorization** ➜ converts text into features.
+3. **Emotion Prediction** ➜ model predicts emotion label.
+4. **Recommendation System** ➜ maps emotion to positive content.
+5. **Daily Report Generator** ➜ analyzes batch posts and returns a JSON report + chart.
+
+---
+
+## 📂 Folder Structure
 
 ```
-project2/
-├── data/
-│   ├── books.csv
-│   ├── articles.csv
-│   ├── tweet_emotions.csv
-│   ├── classified_books.csv
-│   └── classified_articles.csv
-│
-├── models/
-│   ├── random_forest_model.pkl
-│   ├── random_forest_model.zip
-│   ├── tfidf_vectorizer.pkl
-│   └── label_encoder.pkl
-│
+project/
 ├── backend/
-│   ├── app.py                  # FastAPI application
-│   ├── recommender.py          # Filtering logic
-│   ├── model_utils.py          # Preprocessing & prediction utils
-│   ├── daily_emotion_report.py # Daily analysis logic
-│   └── requirements.txt
-│
-├── grad_proj.ipynb            # Main notebook with experiments
-└── README.md                  # You are here!
+│   ├── main.py                  # API Entry point
+│   ├── model_utils.py           # Emotion prediction logic
+│   ├── recommender.py           # Book/article recommendation
+│   ├── daily_emotion_report.py  # Daily report generator
+│   └── preprocessing.py         # Text cleaning & lemmatization
+├── models/                      # Trained model & vectorizer
+├── data/                        # Classified content datasets
+├── daily_report.json            # Daily report output
+├── daily_emotion_chart.png      # Report visualization
+└── requirements.txt             # Python dependencies
 ```
 
-## 📊 Data Files
+---
 
-- books.csv: Raw book data (title, author, content)
-- articles.csv: Raw article content
-- tweet_emotions.csv: Emotion-labeled text (training data)
-- classified_books.csv / classified_articles.csv: Processed & emotion-tagged versions
+## 🔌 API Endpoints
 
-## 🤖 Model Files
+* `POST /predict` → Predict emotion for a single text
+* `POST /recommend` → Recommend content based on user text
+* `POST /daily-report` → Generate report from list of posts
+* `POST /recommend/content` → Recommend from list of emotions (if needed)
+* `GET /emotions` → Return all supported emotion labels
 
-- random_forest_model.pkl: Trained emotion classifier
-- tfidf_vectorizer.pkl: Vectorizes text for model input
-- label_encoder.pkl: Maps encoded emotion labels
+---
 
-> Note: random_forest_model.zip is a compressed version (~168MB)
+## 🛠️ Setup Instructions
 
-## 🚀 API Endpoints (via FastAPI)
+```bash
+# 1. Clone the project
+$ git clone https://github.com/your-username/project2.git
+$ cd project2
 
-Base URL: http://localhost:8000
+# 2. Create a virtual environment
+$ python -m venv venv
+$ source venv/bin/activate  # Windows: venv\Scripts\activate
 
-| Endpoint                  | Method | Description                               |
-|---------------------------|--------|-------------------------------------------|
-| /                         | GET    | Welcome message                           |
-| /predict                  | POST   | Predicts emotion from text                |
-| /recommend                | POST   | Recommend content based on emotion        |
-| /daily-report             | POST   | Generate daily emotional report           |
+# 3. Install dependencies
+$ pip install -r requirements.txt
 
-Sample /predict input:
-```json
-{
-  "text": "I feel very anxious about my exams."
-}
+# 4. Run the API
+$ uvicorn backend.main:app --reload
 ```
 
-Sample /recommend input:
-```json
-{
-  "text": "I feel so stressed lately."
-}
-```
+---
 
-## 🛠️ Running the Backend
+## 🧠 Technologies Used
 
-1. Navigate to backend folder:
-   ```bash
-   cd backend
-   ```
-2. Install requirements:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Start the server:
-   ```bash
-   uvicorn app:app --reload
-   ```
-4. Visit Swagger docs:
-   http://localhost:8000/docs
+* Python
+* FastAPI
+* Scikit-learn
+* NLTK
+* Pandas / NumPy
+* SMOTE (imbalanced-learn)
+* Seaborn / Matplotlib
 
-## 📓 Jupyter Notebook (grad_proj.ipynb)
+---
 
-- Preprocesses data
-- Trains & evaluates classifier
-- Applies emotion filtering
-- Visualizes insights
+## 👨‍💻 Author
 
-## 🧪 Example: Daily Report
+Ahmed Elgabrey – [GitHub](https://github.com/AhmedElgabrey)
 
-Inside daily_emotion_report.py you can run:
-
-```python
-from daily_emotion_report import generate_daily_emotion_report
-
-posts = [
-  "I had a really bad day.",
-  "Feeling grateful and happy today!",
-  "I miss my family so much.",
-  "Loved the book I just finished!"
-]
-
-generate_daily_emotion_report(posts, model, tfidf, label_encoder)
-```
-
-Creates:
-- daily_report.json
-- daily_emotion_chart.png
-
-## 📦 Dependencies
-
-Main:
-- numpy, pandas, scikit-learn, nltk, textstat, joblib, matplotlib, seaborn, wordcloud
-
-Backend:
-- fastapi, uvicorn, pydantic, python-dotenv
-
-## 📄 License
-
-MIT License © 2025 Ahmed Elgabrey
-
-Feel free to fork, star, and contribute! 💖
+Feel free to contribute, suggest improvements, or fork the project!
