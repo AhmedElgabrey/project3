@@ -1,5 +1,4 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Query
 from typing import List
 from pathlib import Path
 import pandas as pd
@@ -31,13 +30,6 @@ try:
 except Exception as e:
     raise RuntimeError(f"❌ Error loading data: {e}")
 
-# ==== Data Models ====
-class TextInput(BaseModel):
-    text: str
-
-class DailyPostsInput(BaseModel):
-    posts: List[str]
-
 # ==== Endpoints ====
 
 @app.get("/")
@@ -46,24 +38,24 @@ async def root():
 
 
 @app.get("/predict")
-def predict_emotion_api(data: TextInput):
+def predict_emotion_api(text: str = Query(..., description="Text to analyze")):
     """
-    توقع المشاعر من نص
+    توقع المشاعر من نص (GET)
     """
     try:
-        emotion = predict_emotion(data.text)
+        emotion = predict_emotion(text, model, vectorizer, label_encoder)
         return {"emotion": emotion}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/recommend")
-def recommend_based_on_text(data: TextInput):
+def recommend_based_on_text(text: str = Query(..., description="Text to analyze and recommend content")):
     """
-    توصية محتوى بناءً على النص بعد التنبؤ بالمشاعر
+    توصية محتوى بناءً على النص بعد التنبؤ بالمشاعر (GET)
     """
     try:
-        emotion = predict_emotion(data.text)
+        emotion = predict_emotion(text, model, vectorizer, label_encoder)
         recommendations = recommend_content(emotion)
         return {
             "predicted_emotion": emotion,
@@ -74,29 +66,18 @@ def recommend_based_on_text(data: TextInput):
 
 
 @app.get("/daily-report")
-def daily_report_api(data: DailyPostsInput):
+def daily_report_api(posts: List[str] = Query(..., description="List of daily posts")):
     """
-    إنشاء تقرير يومي للمشاعر من مجموعة منشورات
+    إنشاء تقرير يومي للمشاعر من مجموعة منشورات (GET)
     """
     try:
         report = generate_daily_emotion_report(
-            posts=data.posts,
+            posts=posts,
             model=model,
             vectorizer=vectorizer,
             label_encoder=label_encoder
         )
         return report
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/emotions")
-async def get_available_emotions():
-    """
-    عرض المشاعر المتاحة
-    """
-    try:
-        return {"emotions": label_encoder.classes_.tolist()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
