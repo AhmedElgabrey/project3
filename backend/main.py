@@ -57,7 +57,7 @@ def predict_emotion_api(data: TextInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/recommend")
+@app.get("/recommend")
 def recommend_based_on_text(data: TextInput):
     """
     توصية محتوى بناءً على النص بعد التنبؤ بالمشاعر
