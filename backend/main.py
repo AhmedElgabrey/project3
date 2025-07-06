@@ -1,106 +1,106 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict, Optional
-import joblib
-import numpy as np
-import pandas as pd
+from typing import List
 from pathlib import Path
-import os
-from dotenv import load_dotenv
+import pandas as pd
+import joblib
 
-# Load environment variables
-load_dotenv()
+from backend.model_utils import predict_emotion
+from backend.recommender import recommend_content
+from backend.daily_emotion_report import generate_daily_emotion_report
 
 app = FastAPI(
-    title="Emotion-Based Content Recommendation API",
-    description="API for recommending books and articles based on emotions",
+    title="Emotion-Based Recommendation API",
+    description="Predict emotion, recommend content, and generate daily reports.",
     version="1.0.0"
 )
 
-# Load models
-MODEL_PATH = Path("../models")
+# تحميل الأدوات
 try:
-    model = joblib.load(MODEL_PATH / "random_forest_model.pkl")
-    vectorizer = joblib.load(MODEL_PATH / "tfidf_vectorizer.pkl")
-    label_encoder = joblib.load(MODEL_PATH / "label_encoder.pkl")
+    model = joblib.load("./models/random_forest_model.pkl")
+    vectorizer = joblib.load("./models/tfidf_vectorizer.pkl")
+    label_encoder = joblib.load("./models/label_encoder.pkl")
 except Exception as e:
-    print(f"Error loading models: {e}")
-    raise
+    raise RuntimeError(f"❌ Error loading models: {e}")
 
-# Load content data
-DATA_PATH = Path("../data")
+# تحميل البيانات المصنفة
+DATA_PATH = Path("./data")
 try:
     books_df = pd.read_csv(DATA_PATH / "classified_books.csv")
     articles_df = pd.read_csv(DATA_PATH / "classified_articles.csv")
 except Exception as e:
-    print(f"Error loading data: {e}")
-    raise
+    raise RuntimeError(f"❌ Error loading data: {e}")
 
-class EmotionRequest(BaseModel):
-    emotions: List[str]
-    num_recommendations: Optional[int] = 3
-
-class ContentRequest(BaseModel):
+# ==== Data Models ====
+class TextInput(BaseModel):
     text: str
-    num_recommendations: Optional[int] = 3
+
+class DailyPostsInput(BaseModel):
+    posts: List[str]
+
+# ==== Endpoints ====
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Emotion-Based Content Recommendation API"}
+    return {"message": "✅ API is running!"}
 
-@app.post("/recommend/emotions")
-async def get_emotion_recommendations(request: EmotionRequest):
+
+@app.post("/predict")
+def predict_emotion_api(data: TextInput):
     """
-    Get recommendations based on emotions
+    توقع المشاعر من نص
     """
     try:
-        # Filter content based on emotions
-        book_recommendations = books_df[books_df['emotion'].isin(request.emotions)].head(request.num_recommendations)
-        article_recommendations = articles_df[articles_df['emotion'].isin(request.emotions)].head(request.num_recommendations)
-        
-        return {
-            "books": book_recommendations.to_dict(orient='records'),
-            "articles": article_recommendations.to_dict(orient='records')
-        }
+        emotion = predict_emotion(data.text)
+        return {"emotion": emotion}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/recommend/content")
-async def get_content_recommendations(request: ContentRequest):
+
+@app.post("/recommend")
+def recommend_based_on_text(data: TextInput):
     """
-    Get recommendations based on content similarity
+    توصية محتوى بناءً على النص بعد التنبؤ بالمشاعر
     """
     try:
-        # Transform input text
-        text_features = vectorizer.transform([request.text])
-        
-        # Get emotion prediction
-        emotion_pred = model.predict(text_features)
-        emotion = label_encoder.inverse_transform(emotion_pred)[0]
-        
-        # Get recommendations for predicted emotion
-        book_recommendations = books_df[books_df['emotion'] == emotion].head(request.num_recommendations)
-        article_recommendations = articles_df[articles_df['emotion'] == emotion].head(request.num_recommendations)
-        
+        emotion = predict_emotion(data.text)
+        recommendations = recommend_content(emotion)
         return {
             "predicted_emotion": emotion,
-            "books": book_recommendations.to_dict(orient='records'),
-            "articles": article_recommendations.to_dict(orient='records')
+            "recommendations": recommendations
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/daily-report")
+def daily_report_api(data: DailyPostsInput):
+    """
+    إنشاء تقرير يومي للمشاعر من مجموعة منشورات
+    """
+    try:
+        report = generate_daily_emotion_report(
+            posts=data.posts,
+            model=model,
+            vectorizer=vectorizer,
+            label_encoder=label_encoder
+        )
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/emotions")
 async def get_available_emotions():
     """
-    Get list of available emotions
+    عرض المشاعر المتاحة
     """
     try:
-        emotions = label_encoder.classes_.tolist()
-        return {"emotions": emotions}
+        return {"emotions": label_encoder.classes_.tolist()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
