@@ -7,11 +7,13 @@ from typing import List, Dict
 from backend.model_utils import predict_emotion
 from backend.recommender import recommend_content
 
+
+
 def generate_daily_emotion_report(posts: List[str], model, vectorizer, label_encoder) -> Dict:
     """
     إنشاء تقرير يومي عن المشاعر المستخرجة من منشورات المستخدم.
     """
-    emotions = [predict_emotion(p, model, vectorizer, label_encoder) for p in posts]
+    emotions = [predict_emotion(p) for p in posts]
     emotion_counts = dict(Counter(emotions))
     total = sum(emotion_counts.values())
     emotion_distribution = {
@@ -43,7 +45,6 @@ def generate_daily_emotion_report(posts: List[str], model, vectorizer, label_enc
         "total_posts": total,
         "emotion_distribution": emotion_distribution,
         "top_negative_posts": top_negative,
-        "recommendations": recommendations
     }
 
     with open("daily_report.json", "w", encoding="utf-8") as f:

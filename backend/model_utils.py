@@ -17,3 +17,16 @@ def predict_emotion(text: str) -> str:
     vect_text = vectorizer.transform([processed])
     prediction = model.predict(vect_text)
     return label_encoder.inverse_transform(prediction)[0]
+
+
+
+
+
+
+
+
+
+
+
+
+

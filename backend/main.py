@@ -1,12 +1,11 @@
+from backend.model_utils import predict_emotion
+from backend.recommender import recommend_content
+from backend.daily_emotion_report import generate_daily_emotion_report
 from fastapi import FastAPI, HTTPException, Query
 from typing import List
 from pathlib import Path
 import pandas as pd
 import joblib
-
-from backend.model_utils import predict_emotion
-from backend.recommender import recommend_content
-from backend.daily_emotion_report import generate_daily_emotion_report
 
 app = FastAPI(
     title="Emotion-Based Recommendation API",
@@ -14,7 +13,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# تحميل الأدوات
+# Load models
 try:
     model = joblib.load("./models/random_forest_model.pkl")
     vectorizer = joblib.load("./models/tfidf_vectorizer.pkl")
@@ -22,11 +21,11 @@ try:
 except Exception as e:
     raise RuntimeError(f"❌ Error loading models: {e}")
 
-# تحميل البيانات المصنفة
-DATA_PATH = Path("./data")
+# Load classified content data
+data_path = Path("./data")
 try:
-    books_df = pd.read_csv(DATA_PATH / "classified_books.csv")
-    articles_df = pd.read_csv(DATA_PATH / "classified_articles.csv")
+    books_df = pd.read_csv(data_path / "classified_books.csv")
+    articles_df = pd.read_csv(data_path / "classified_articles.csv")
 except Exception as e:
     raise RuntimeError(f"❌ Error loading data: {e}")
 
@@ -40,27 +39,88 @@ async def root():
 @app.get("/predict")
 def predict_emotion_api(text: str = Query(..., description="Text to analyze")):
     """
-    توقع المشاعر من نص (GET)
+    Predict emotion from text (GET)
     """
     try:
-        emotion = predict_emotion(text, model, vectorizer, label_encoder)
+        emotion = predict_emotion(text)
         return {"emotion": emotion}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/recommend")
-def recommend_based_on_text(text: str = Query(..., description="Text to analyze and recommend content")):
+# Emotion mapping to suggest positive content
+mood_map = {
+    'sadness': ['joy', 'surprise'],
+    'anger': ['love', 'joy'],
+    'fear': ['love', 'joy'],
+    'joy': ['joy', 'surprise', 'love'],
+    'surprise': ['love', 'joy'],
+    'love': ['joy', 'love', 'surprise']
+}
+
+
+@app.get("/recommend/text")
+def recommend_by_text(text: str = Query(..., description="Input text to analyze and recommend content")):
     """
-    توصية محتوى بناءً على النص بعد التنبؤ بالمشاعر (GET)
+    Recommend content based on predicted emotion from text using mood mapping (GET)
     """
     try:
-        emotion = predict_emotion(text, model, vectorizer, label_encoder)
-        recommendations = recommend_content(emotion)
+        emotion = predict_emotion(text)
+
+        # Map the predicted emotion to positive target emotions
+        related_emotions = mood_map.get(emotion.lower(), [emotion])
+
+        combined_books = []
+        combined_articles = []
+
+        for emo in related_emotions:
+            result = recommend_content(emo)
+            combined_books.extend(result["books"])
+            combined_articles.extend(result["articles"])
+
+        # Remove duplicates
+        unique_books = {book["title"]: book for book in combined_books}.values()
+        unique_articles = {article["title"]: article for article in combined_articles}.values()
+
         return {
+            "input_text": text,
             "predicted_emotion": emotion,
-            "recommendations": recommendations
+            "recommendations": {
+                "books": list(unique_books),
+                "articles": list(unique_articles)
+            }
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/recommend/emotion")
+def recommend_by_emotion_api(emotion: str = Query(..., description="User emotion (e.g. joy, sadness, fear)")):
+    """
+    Recommend content based on input emotion using mood mapping.
+    Returns books and articles related to mapped positive emotions.
+    """
+    try:
+        mapped_emotions = mood_map.get(emotion.lower(), [emotion])
+
+        combined_books = []
+        combined_articles = []
+
+        for emo in mapped_emotions:
+            result = recommend_content(emo)
+            combined_books.extend(result["books"])
+            combined_articles.extend(result["articles"])
+
+        unique_books = {book["title"]: book for book in combined_books}.values()
+        unique_articles = {article["title"]: article for article in combined_articles}.values()
+
+        return {
+            "recommendations": {
+                "books": list(unique_books),
+                "articles": list(unique_articles)
+            }
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -68,7 +128,7 @@ def recommend_based_on_text(text: str = Query(..., description="Text to analyze 
 @app.get("/daily-report")
 def daily_report_api(posts: List[str] = Query(..., description="List of daily posts")):
     """
-    إنشاء تقرير يومي للمشاعر من مجموعة منشورات (GET)
+    Generate a daily emotion report from a list of posts (GET)
     """
     try:
         report = generate_daily_emotion_report(

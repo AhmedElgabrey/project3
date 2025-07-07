@@ -1,6 +1,20 @@
 import pandas as pd
 from typing import Dict, List
-from backend.model_utils import predict_emotion
+from pathlib import Path
+
+data_path = Path("./data")
+books_df = pd.read_csv(data_path / "classified_books.csv")
+articles_df = pd.read_csv(data_path / "classified_articles.csv")
+
+mood_map = {
+'sadness': ['joy', 'surprise'],
+'anger': ['love', 'joy'],
+'fear': ['love', 'joy'],
+'joy': ['joy', 'surprise', 'love'],
+'surprise': ['love', 'joy'],
+'love': ['joy', 'love', 'surprise']
+}
+
 
 
 def recommend_content(emotion: str, top_n: int = 5) -> Dict[str, List[Dict]]:
@@ -14,3 +28,4 @@ def recommend_content(emotion: str, top_n: int = 5) -> Dict[str, List[Dict]]:
         "books": book_recs.to_dict(orient='records'),
         "articles": article_recs.to_dict(orient='records')
     }
+    
